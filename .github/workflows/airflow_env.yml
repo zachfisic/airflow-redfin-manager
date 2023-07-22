@@ -1,0 +1,23 @@
+name: Deploy to EC2 Instance 
+
+on:
+  push:     
+    branches:  
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Copy files via ssh key
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{  secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: dags/*
+          target: /home/ubuntu/airflow/

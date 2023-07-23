@@ -6,6 +6,13 @@ from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeF
 LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
 TEST_EVENT = { "event_datetime": datetime.now() }
 
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
+
 with DAG(
     dag_id='redfin_raw_data_import',
     schedule_interval=None,
@@ -17,5 +24,5 @@ with DAG(
     invoke_lambda_function = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_function',
         function_name=LAMBDA_FN,
-        payload=json.dumps(TEST_EVENT)
+        payload=json.dumps(TEST_EVENT, cls=DateTimeEncoder)
     )

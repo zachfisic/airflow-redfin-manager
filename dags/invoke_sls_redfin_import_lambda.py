@@ -4,7 +4,10 @@ from airflow import DAG
 from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
 
 LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
-TEST_EVENT = { "event_datetime": datetime.now() }
+TEST_EVENT = {
+    "event_datetime": datetime.now(),
+    "zip_codes": ["29601","29603","29607","29609","29611"]
+}
 
 
 class DateTimeEncoder(json.JSONEncoder):

@@ -17,5 +17,5 @@ with DAG(
     invoke_lambda_function = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_function',
         function_name=LAMBDA_FN,
-        payload=TEST_EVENT
+        payload=json.dumps(TEST_EVENT)
     )

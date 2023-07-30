@@ -1,6 +1,10 @@
 import json
 from datetime import datetime, timedelta
+from hooks.MySqsHook import MySqsHook
 from airflow import DAG
+from airflow.providers.amazon.aws.hooks.sqs import SqsHook
+from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
+from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
 
 LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
@@ -16,6 +20,10 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
         return super().default(o)
 
+def get_queue():
+    queue_url = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
+    print(queue_url)
+
 with DAG(
     dag_id='redfin_raw_data_import',
     schedule_interval=None,
@@ -24,8 +32,23 @@ with DAG(
     tags=['example'],
     catchup=False,
 ) as dag:
+
+    # read_from_queue_in_batch = SqsSensor(
+    #     task_id="read_from_queue_in_batch",
+    #     sqs_queue=sqs_queue,
+    #     # Get maximum 5 messages each poll
+    #     max_messages=5,
+    #     # 1 poll before returning results
+    #     num_batches=1,
+    # )
+    test_python_operator_zip_code = PythonOperator(
+        task_id="test_python_operator_zip_code",
+        python_callable=get_queue
+    )
     invoke_lambda_function = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_function',
         function_name=LAMBDA_FN,
         payload=json.dumps(TEST_EVENT, cls=DateTimeEncoder)
     )
+
+    test_python_operator_zip_code >> invoke_lambda_function

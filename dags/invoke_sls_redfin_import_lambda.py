@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.plugins.hooks.MySqsHook import MySqsHook
+from hooks.MySqsHook import MySqsHook
 from airflow.providers.amazon.aws.hooks.sqs import SqsHook
 from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
 from airflow.operators.python import PythonOperator

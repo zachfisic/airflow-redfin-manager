@@ -22,7 +22,6 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
         return super().default(o)
 
-@task
 def get_queue():
     queue_url = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
     return queue_url
@@ -44,11 +43,10 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    sqs_queue = get_queue()
 
     read_from_queue_in_batch = SqsSensor(
         task_id="read_from_queue_in_batch",
-        sqs_queue=sqs_queue,
+        sqs_queue=get_queue(),
         # Get maximum 5 messages each poll
         max_messages=5,
         # 1 poll before returning results
@@ -65,7 +63,6 @@ with DAG(
     # test_python_operator_zip_code >> invoke_lambda_function
     
     chain(
-        sqs_queue,
         read_from_queue_in_batch,
         pull_test_messages
     )

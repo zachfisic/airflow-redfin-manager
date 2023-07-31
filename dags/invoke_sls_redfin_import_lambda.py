@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timedelta
 from airflow import DAG
+from airflow.decorators import task
 from hooks.MySqsHook import MySqsHook
+from airflow.models.baseoperator import chain
 from airflow.providers.amazon.aws.hooks.sqs import SqsHook
 from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
 from airflow.operators.python import PythonOperator
@@ -20,9 +22,17 @@ class DateTimeEncoder(json.JSONEncoder):
             return o.isoformat()
         return super().default(o)
 
+@task
 def get_queue():
     queue_url = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
     print(queue_url)
+
+@task
+def pull_messages(ti) -> None:
+    messages = ti.xcom_pull(key='messages', task_ids=['read_from_queue_in_batch'])
+    if not messages:
+        raise ValueError('No value currently stored in XComs.')
+    print("messages: ", messages)
 
 with DAG(
     dag_id='redfin_raw_data_import',
@@ -33,22 +43,28 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    # read_from_queue_in_batch = SqsSensor(
-    #     task_id="read_from_queue_in_batch",
-    #     sqs_queue=sqs_queue,
-    #     # Get maximum 5 messages each poll
-    #     max_messages=5,
-    #     # 1 poll before returning results
-    #     num_batches=1,
-    # )
-    test_python_operator_zip_code = PythonOperator(
-        task_id="test_python_operator_zip_code",
-        python_callable=get_queue
-    )
-    invoke_lambda_function = LambdaInvokeFunctionOperator(
-        task_id='invoke_lambda_function',
-        function_name=LAMBDA_FN,
-        payload=json.dumps(TEST_EVENT, cls=DateTimeEncoder)
+    sqs_queue = get_queue()
+
+    read_from_queue_in_batch = SqsSensor(
+        task_id="read_from_queue_in_batch",
+        sqs_queue=sqs_queue,
+        # Get maximum 5 messages each poll
+        max_messages=5,
+        # 1 poll before returning results
+        num_batches=1,
     )
 
-    test_python_operator_zip_code >> invoke_lambda_function
+    pull_test_messages = pull_messages()
+
+    # invoke_lambda_function = LambdaInvokeFunctionOperator(
+    #     task_id='invoke_lambda_function',
+    #     function_name=LAMBDA_FN,
+    #     payload=json.dumps(TEST_EVENT, cls=DateTimeEncoder)
+    # )
+    # test_python_operator_zip_code >> invoke_lambda_function
+    
+    chain(
+        sqs_queue,
+        read_from_queue_in_batch,
+        pull_test_messages
+    )

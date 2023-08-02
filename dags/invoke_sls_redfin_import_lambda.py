@@ -46,6 +46,7 @@ def update_run_date(ti=None):
     ddb_hook = MyDynamoDBHook(table_keys=["zip"], table_name="zip_codes")
     items = ddb_hook.get_items(zips)
     for item in items:
+        item["attempted"] = "Y"
         item["last_run_date"] = date.today().isoformat()
 
     print(items)
@@ -82,7 +83,8 @@ with DAG(
         sqs_queue=get_queue(),
         max_messages=5, # Get maximum 5 messages each poll
         num_batches=1,  # poll once before returning results
-        delete_message_on_reception=False
+        delete_message_on_reception=False,
+        timeout=60*60
     )
 
     extract_zips_from_xcom = extract_zips()

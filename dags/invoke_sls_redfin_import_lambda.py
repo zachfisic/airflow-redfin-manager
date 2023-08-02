@@ -27,7 +27,7 @@ def get_queue():
 
 @task
 def pull_messages(ti=None) -> None:
-    messages = ti.xcom_pull(key='messages', task_ids=['read_from_queue_in_batch'])
+    messages = ti.xcom_pull(key='messages', task_ids='read_from_queue_in_batch')
     if not messages:
         raise ValueError('No value currently stored in XComs.')
     print("messages received!")
@@ -36,7 +36,7 @@ def pull_messages(ti=None) -> None:
 
 @task
 def delete_messages(ti=None) -> None:
-    messages = ti.xcom_pull(key='messages', task_ids=['read_from_queue_in_batch'])
+    messages = ti.xcom_pull(key='messages', task_ids='read_from_queue_in_batch')
     if not messages:
         raise ValueError('No value currently stored in XComs.')
 

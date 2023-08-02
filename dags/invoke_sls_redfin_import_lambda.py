@@ -9,6 +9,7 @@ from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.dynamodb import DynamoDBHook
 from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
+from datetime import date
 
 LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
 
@@ -44,7 +45,12 @@ def update_run_date(ti=None):
     zips = [(k,v) for z in data['zips'] for k,v in z.items() if k == 'zip']
     ddb_hook = MyDynamoDBHook(table_keys=["zip"], table_name="zip_codes")
     items = ddb_hook.get_items(zips)
+    for item in items:
+        item["last_run_date"] = date.today().isoformat()
+
     print(items)
+    ddb_hook.write_batch_data(items)
+    
 
 
 @task

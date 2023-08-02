@@ -40,6 +40,7 @@ def extract_zips(ti=None):
 @task
 def update_run_date(ti=None):
     data = ti.xcom_pull(key='return_value', task_ids='extract_zips')
+    data = json.loads(data)
     zips = [(k,v) for z in data['zips'] for k,v in z.items() if k == 'zip']
     ddb_hook = MyDynamoDBHook(table_keys=["zip"], table_name="zip_codes")
     items = ddb_hook.get_items(zips)

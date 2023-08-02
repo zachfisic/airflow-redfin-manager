@@ -9,5 +9,5 @@ class MySqsHook(AwsBaseHook):
     def get_queue_url(self, queue_name):
         return self.get_conn().get_queue_url(QueueName=queue_name)
     
-    def delete_message(self, queue_name, receipt_handle):
-        return self.get_conn().delete_message(QueueName=queue_name, ReceiptHandle=receipt_handle)
+    def delete_message(self, queue_url, receipt_handle):
+        return self.get_conn().delete_message(QueueUrl=queue_url, ReceiptHandle=receipt_handle)

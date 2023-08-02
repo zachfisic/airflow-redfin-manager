@@ -9,11 +9,7 @@ from airflow.providers.amazon.aws.sensors.sqs import SqsSensor
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
 
-# LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
-# TEST_EVENT = {
-#     "event_datetime": datetime.now(),
-#     "zip_codes": ["29601","29603","29607","29609","29611"]
-# }
+LAMBDA_FN = "sls-redfin-import-lambda-dev-import_raw"
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
@@ -25,14 +21,20 @@ def get_queue():
     response = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
     return response['QueueUrl']
 
+    
 @task
-def pull_messages(ti=None) -> None:
+def extract_zips(ti=None):
     messages = ti.xcom_pull(key='messages', task_ids='read_from_queue_in_batch')
+    zip_list = []
     if not messages:
         raise ValueError('No value currently stored in XComs.')
-    print("messages received!")
-    print("messages: ", messages)
-    
+    for message in messages:
+        content = json.loads(message['Body'])
+        zip_list.append(content)
+
+    ret = {"zips": zip_list}
+    return json.dumps(ret)
+        
 
 @task
 def delete_messages(ti=None) -> None:
@@ -57,30 +59,27 @@ with DAG(
     catchup=False,
 ) as dag:
 
-
+    # Gets messages from SQS and store them in xcom under key "messages"
     read_from_queue_in_batch = SqsSensor(
         task_id="read_from_queue_in_batch",
         sqs_queue=get_queue(),
-        # Get maximum 5 messages each poll
-        max_messages=5,
-        # 1 poll before returning results
-        num_batches=1,
+        max_messages=5, # Get maximum 5 messages each poll
+        num_batches=1,  # poll once before returning results
         delete_message_on_reception=False
     )
 
-    pull_test_messages = pull_messages()
+    extract_zips_from_xcom = extract_zips()
 
     # invoke_lambda_function = LambdaInvokeFunctionOperator(
     #     task_id='invoke_lambda_function',
     #     function_name=LAMBDA_FN,
-    #     payload=json.dumps(TEST_EVENT, cls=DateTimeEncoder)
+    #     payload="{{ ti.xcom_pull(key='extract_zips') }}"
     # )
-    # test_python_operator_zip_code >> invoke_lambda_function
 
     delete_test_messages = delete_messages()
     
     chain(
         read_from_queue_in_batch,
-        pull_test_messages,
+        extract_zips_from_xcom,
         delete_test_messages
     )

@@ -70,16 +70,17 @@ with DAG(
 
     extract_zips_from_xcom = extract_zips()
 
-    # invoke_lambda_function = LambdaInvokeFunctionOperator(
-    #     task_id='invoke_lambda_function',
-    #     function_name=LAMBDA_FN,
-    #     payload="{{ ti.xcom_pull(key='extract_zips') }}"
-    # )
+    invoke_lambda_function = LambdaInvokeFunctionOperator(
+        task_id='invoke_lambda_function',
+        function_name=LAMBDA_FN,
+        payload="{{ ti.xcom_pull(key='return_value', task_ids='extract_zips') }}"
+    )
 
     delete_test_messages = delete_messages()
     
     chain(
         read_from_queue_in_batch,
         extract_zips_from_xcom,
+        invoke_lambda_function,
         delete_test_messages
     )

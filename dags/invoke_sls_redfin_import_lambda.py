@@ -23,9 +23,8 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(o)
 
 def get_queue():
-    queue_url = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
-    print("queue_url: ", queue_url)
-    return queue_url
+    response = MySqsHook().get_queue_url(queue_name='zip_code_queue.fifo')
+    return response['QueueUrl']
 
 @task
 def pull_messages(ti=None) -> None:

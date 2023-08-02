@@ -19,7 +19,7 @@ class MyDynamoDBHook(AwsBaseHook):
                         k: v
                     }
                 )
-            items.append(response['Item'])
+                items.append(response['Item'])
             return items
         except Exception as e:
             raise AirflowException(f"Failed to retrieve items from dynamodb, error: {str(e)}")

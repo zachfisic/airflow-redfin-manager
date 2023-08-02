@@ -42,8 +42,8 @@ def delete_messages(ti=None) -> None:
 
     for message in messages:
         response = MySqsHook().delete_message(
-            QueueUrl=get_queue(),
-            ReceiptHandle=message['ReceiptHandle']
+            queue_url=get_queue(),
+            receipt_handle=message['ReceiptHandle']
         )
         print(response)
 

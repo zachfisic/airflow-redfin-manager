@@ -70,7 +70,7 @@ def delete_messages(ti=None) -> None:
 
 with DAG(
     dag_id='redfin_raw_data_import',
-    schedule_interval='*/5 * * * *',
+    schedule_interval=None,
     start_date=datetime(2023, 7, 20),
     dagrun_timeout=timedelta(minutes=60),
     tags=['example'],
